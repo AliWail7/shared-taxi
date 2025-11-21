@@ -2,6 +2,7 @@
 import 'package:flutter/cupertino.dart';
 import '../utils/app_colors.dart';
 import '../models/governorate.dart';
+import 'available_trips_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -457,6 +458,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _searchTrips() {
-    print('Searching for trips...');
+    if (_fromGovernorate == null || _toGovernorate == null || _selectedDate == null) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => AvailableTripsScreen(
+          fromGovernorate: _fromGovernorate!,
+          toGovernorate: _toGovernorate!,
+          selectedDate: _selectedDate!,
+        ),
+      ),
+    );
   }
 }

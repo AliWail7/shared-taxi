@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../widgets/custom_text_field.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isDriver;
@@ -32,16 +34,43 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = true;
       });
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      final authService = Provider.of<AuthService>(context, listen: false);
+      
+      final result = await authService.login(
+        _phoneController.text.trim(),
+        _passwordController.text,
+        widget.isDriver,
+      );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        
-        // Navigate to home screen or OTP verification
-        Navigator.pushReplacementNamed(context, '/home');
+
+        if (result['success']) {
+          // Navigate to driver or passenger main screen
+          if (widget.isDriver) {
+            Navigator.pushReplacementNamed(context, '/driver-main');
+          } else {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          // Show error message
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('خطأ'),
+              content: Text(result['message']),
+              actions: [
+                CupertinoDialogAction(
+                  isDefaultAction: true,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('حسناً'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
   }

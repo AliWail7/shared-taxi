@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../models/governorate.dart';
 import '../models/vehicle.dart';
+import '../models/waiting_point.dart';
+import '../providers/trip_provider.dart';
 
 class CreateTripScreen extends StatefulWidget {
-  const CreateTripScreen({super.key});
+  final VoidCallback? onTripCreated;
+  
+  const CreateTripScreen({super.key, this.onTripCreated});
 
   @override
   State<CreateTripScreen> createState() => _CreateTripScreenState();
@@ -16,12 +21,12 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   
   Governorate? _fromGovernorate;
   Governorate? _toGovernorate;
+  WaitingPoint? _fromWaitingPoint;
+  WaitingPoint? _toWaitingPoint;
   DateTime? _departureDate;
   TimeOfDay? _departureTime;
-  VehicleType? _vehicleType;
   int _availableSeats = 3;
   double _pricePerSeat = 10000;
-  String? _notes;
 
   final List<Governorate> _governorates = Governorate.iraqiGovernorates;
 
@@ -106,9 +111,21 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   label: 'من',
                   icon: CupertinoIcons.location_fill,
                   iconColor: AppColors.primary,
-                  value: _fromGovernorate?.nameEn,
+                  value: _fromGovernorate?.name,
                   onTap: () => _showGovernoratePickerFrom(),
                 ),
+                
+                const SizedBox(height: 12),
+                
+                // From Waiting Point (يظهر فقط عند اختيار المحافظة)
+                if (_fromGovernorate != null)
+                  _buildLocationField(
+                    label: 'نقطة الانطلاق',
+                    icon: CupertinoIcons.map_pin_ellipse,
+                    iconColor: AppColors.secondary,
+                    value: _fromWaitingPoint?.name,
+                    onTap: () => _showWaitingPointPicker(true),
+                  ),
                 
                 const SizedBox(height: 16),
                 
@@ -117,9 +134,21 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   label: 'إلى',
                   icon: CupertinoIcons.placemark_fill,
                   iconColor: AppColors.error,
-                  value: _toGovernorate?.nameEn,
+                  value: _toGovernorate?.name,
                   onTap: () => _showGovernoratePickerTo(),
                 ),
+                
+                const SizedBox(height: 12),
+                
+                // To Waiting Point (يظهر فقط عند اختيار المحافظة)
+                if (_toGovernorate != null)
+                  _buildLocationField(
+                    label: 'نقطة الوصول',
+                    icon: CupertinoIcons.map_pin_ellipse,
+                    iconColor: AppColors.secondary,
+                    value: _toWaitingPoint?.name,
+                    onTap: () => _showWaitingPointPicker(false),
+                  ),
                 
                 const SizedBox(height: 24),
                 
@@ -174,11 +203,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Vehicle Type
-                _buildVehicleTypeSelector(),
-                
-                const SizedBox(height: 16),
-                
                 // Available Seats
                 _buildSeatsSelector(),
                 
@@ -229,7 +253,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
                     ),
-                    onChanged: (value) => _notes = value,
                   ),
                 ),
                 
@@ -396,103 +419,6 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildVehicleTypeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(CupertinoIcons.car_detailed, color: AppColors.primary, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'نوع المركبة',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: VehicleType.values.map((type) {
-              final isSelected = _vehicleType == type;
-              String typeName;
-              IconData typeIcon;
-              
-              switch (type) {
-                case VehicleType.sedan:
-                  typeName = 'سيدان';
-                  typeIcon = CupertinoIcons.car_fill;
-                  break;
-                case VehicleType.suv:
-                  typeName = 'دفع رباعي';
-                  typeIcon = CupertinoIcons.car_detailed;
-                  break;
-                case VehicleType.van:
-                  typeName = 'فان';
-                  typeIcon = CupertinoIcons.bus;
-                  break;
-                case VehicleType.minibus:
-                  typeName = 'باص صغير';
-                  typeIcon = CupertinoIcons.bus;
-                  break;
-              }
-              
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => setState(() => _vehicleType = type),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? AppColors.primary : AppColors.border,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          typeIcon,
-                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          typeName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
       ),
     );
   }
@@ -701,9 +627,12 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               child: CupertinoPicker(
                 itemExtent: 50,
                 onSelectedItemChanged: (index) {
-                  setState(() => _fromGovernorate = _governorates[index]);
+                  setState(() {
+                    _fromGovernorate = _governorates[index];
+                    _fromWaitingPoint = null; // إعادة تعيين نقطة الانتظار عند تغيير المحافظة
+                  });
                 },
-                children: _governorates.map((gov) => Center(child: Text(gov.nameEn, style: const TextStyle(fontSize: 18)))).toList(),
+                children: _governorates.map((gov) => Center(child: Text(gov.name, style: const TextStyle(fontSize: 18)))).toList(),
               ),
             ),
           ],
@@ -744,9 +673,95 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               child: CupertinoPicker(
                 itemExtent: 50,
                 onSelectedItemChanged: (index) {
-                  setState(() => _toGovernorate = _governorates[index]);
+                  setState(() {
+                    _toGovernorate = _governorates[index];
+                    _toWaitingPoint = null; // إعادة تعيين نقطة الانتظار عند تغيير المحافظة
+                  });
                 },
-                children: _governorates.map((gov) => Center(child: Text(gov.nameEn, style: const TextStyle(fontSize: 18)))).toList(),
+                children: _governorates.map((gov) => Center(child: Text(gov.name, style: const TextStyle(fontSize: 18)))).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة جديدة لاختيار نقطة الانتظار
+  void _showWaitingPointPicker(bool isFrom) {
+    final governorate = isFrom ? _fromGovernorate : _toGovernorate;
+    if (governorate == null) return;
+
+    final waitingPoints = WaitingPoint.getPointsByGovernorate(governorate.id);
+    
+    if (waitingPoints.isEmpty) {
+      // في حالة عدم وجود نقاط انتظار
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('تنبيه'),
+          content: Text('لا توجد نقاط انتظار محددة لـ ${governorate.name}'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('حسناً'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 300,
+        color: Colors.white,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: const Text('إلغاء'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Text(
+                    isFrom ? 'نقطة الانطلاق - ${governorate.name}' : 'نقطة الوصول - ${governorate.name}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  CupertinoButton(
+                    child: const Text('تم'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 50,
+                onSelectedItemChanged: (index) {
+                  setState(() {
+                    if (isFrom) {
+                      _fromWaitingPoint = waitingPoints[index];
+                    } else {
+                      _toWaitingPoint = waitingPoints[index];
+                    }
+                  });
+                },
+                children: waitingPoints.map((point) => 
+                  Center(
+                    child: Text(
+                      point.name,
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ).toList(),
               ),
             ),
           ],
@@ -874,24 +889,26 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       return;
     }
 
-    if (_vehicleType == null) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('تنبيه'),
-          content: const Text('الرجاء اختيار نوع المركبة'),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('حسناً'),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+    // إنشاء الرحلة وإضافتها إلى Provider
+    final tripProvider = Provider.of<TripProvider>(context, listen: false);
+    final newTrip = Trip(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      fromGovernorate: _fromGovernorate!,
+      toGovernorate: _toGovernorate!,
+      fromWaitingPoint: _fromWaitingPoint,
+      toWaitingPoint: _toWaitingPoint,
+      departureDate: _departureDate!,
+      departureTime: '${_departureTime!.hour}:${_departureTime!.minute.toString().padLeft(2, '0')}',
+      vehicleType: VehicleType.sedan,
+      availableSeats: _availableSeats,
+      totalSeats: _availableSeats,
+      pricePerSeat: _pricePerSeat,
+      status: TripStatus.upcoming,
+      createdAt: DateTime.now(),
+    );
 
-    // TODO: Create trip and save to database
+    tripProvider.addTrip(newTrip);
+
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -901,8 +918,24 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
           CupertinoDialogAction(
             child: const Text('حسناً'),
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // إغلاق الـ dialog
+              
+              // إعادة تعيين النموذج
+              setState(() {
+                _fromGovernorate = null;
+                _toGovernorate = null;
+                _fromWaitingPoint = null;
+                _toWaitingPoint = null;
+                _departureDate = null;
+                _departureTime = null;
+                _availableSeats = 3;
+                _pricePerSeat = 10000;
+              });
+              
+              // استدعاء callback للرجوع إلى الشاشة الرئيسية
+              if (widget.onTripCreated != null) {
+                widget.onTripCreated!();
+              }
             },
           ),
         ],

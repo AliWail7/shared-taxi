@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../models/vehicle.dart';
+import '../models/user.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   final bool isDriver;
@@ -763,32 +766,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    final authService = Provider.of<AuthService>(context, listen: false);
+    
+    // إنشاء مستخدم جديد
+    final newUser = User(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+      password: _passwordController.text,
+      userType: widget.isDriver ? UserType.driver : UserType.passenger,
+      createdAt: DateTime.now(),
+      governorate: widget.isDriver ? _governorateController.text.trim() : null,
+      address: widget.isDriver ? _addressController.text.trim() : null,
+      vehicleBrand: widget.isDriver ? _vehicleBrandController.text.trim() : null,
+      vehicleModel: widget.isDriver ? _vehicleModelController.text.trim() : null,
+      vehicleColor: widget.isDriver ? _vehicleColorController.text.trim() : null,
+      plateNumber: widget.isDriver ? _plateNumberController.text.trim() : null,
+      vehicleType: widget.isDriver && _selectedVehicleType != null 
+          ? _selectedVehicleType.toString().split('.').last 
+          : null,
+      totalSeats: widget.isDriver ? _totalSeats : null,
+      hasAC: widget.isDriver ? _hasAC : null,
+    );
+
+    final result = await authService.register(newUser);
 
     setState(() => _isLoading = false);
 
     if (mounted) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('نجاح'),
-          content: Text(
-            widget.isDriver
-                ? 'تم إنشاء حسابك بنجاح!\nسيتم مراجعة بياناتك خلال 24 ساعة.'
-                : 'تم إنشاء حسابك بنجاح!\nيمكنك الآن البدء بحجز الرحلات.',
-          ),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('متابعة'),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, '/home');
-              },
+      if (result['success']) {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('نجاح'),
+            content: Text(
+              widget.isDriver
+                  ? 'تم إنشاء حسابك بنجاح!\nيمكنك الآن تسجيل الدخول.'
+                  : 'تم إنشاء حسابك بنجاح!\nيمكنك الآن تسجيل الدخول.',
             ),
-          ],
-        ),
-      );
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('متابعة'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context); // الرجوع لشاشة تسجيل الدخول
+                },
+              ),
+            ],
+          ),
+        );
+      } else {
+        showCupertinoDialog(
+          context: context,
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text('خطأ'),
+            content: Text(result['message']),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('حسناً'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
   
